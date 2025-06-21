@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dummy Meter Readings</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100% ; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    select { padding: 5px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Dummy Meter Readings</h1>
+  <p>Data updates every minute. Last updated: <span id="lastUpdated">Loading...</span></p>
+  <label for="customerSelect">Select Customer:</label>
+  <select id="customerSelect" onchange="fetchCustomerData()">
+    <option value="">All Customers</option>
+    <!-- Populated dynamically -->
+  </select>
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>Customer ID</th>
+        <th>Timestamp</th>
+        <th>Energy Usage (kWh)</th>
+        <th>Voltage (V)</th>
+        <th>Power Factor</th>
+      </tr>
+    </thead>
+    <tbody id="dataBody"></tbody>
+  </table>
+
+  <script>
+    // Populate customer dropdown
+    async function populateCustomerSelect() {
+      const select = document.getElementById('customerSelect');
+      for (let i = 1; i <= 100; i++) {
+        const customerId = `CUST${String(i).padStart(3, '0')}`;
+        const option = document.createElement('option');
+        option.value = customerId;
+        option.textContent = customerId;
+        select.appendChild(option);
+      }
+    }
+
+    // Fetch and display data
+    async function fetchMeterData(customerId = '') {
+      try {
+        const url = customerId ? `http://localhost:3000/api/meter-data/${customerId}` : 'http://localhost:3000/api/meter-data';
+        const response = await fetch(url);
+        const data = await response.json();
+        updateTable(data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        document.getElementById('dataBody').innerHTML = '<tr><td colspan="5">Error loading data</td></tr>';
+      }
+    }
+
+    // Update table with data
+    function updateTable(data) {
+      const tbody = document.getElementById('dataBody');
+      tbody.innerHTML = ''; // Clear existing rows
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.customerId}</td>
+          <td>${new Date(row.timestamp).toLocaleString()}</td>
+          <td>${row.energyUsage_kWh.toFixed(4)}</td>
+          <td>${row.voltage.toFixed(1)}</td>
+          <td>${row.powerFactor.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    }
+
+    // Fetch data for selected customer
+    function fetchCustomerData() {
+      const customerId = document.getElementById('customerSelect').value;
+      fetchMeterData(customerId);
+    }
+
+    // Initial setup
+    populateCustomerSelect();
+    fetchMeterData();
+    // Fetch latest data every minute
+    setInterval(() => fetchCustomerData(), 60000);
+  </script>
+</body>
+</html>
